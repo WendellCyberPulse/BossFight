@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boss Fight - Cyber Apocalypse</title>
+    <style>
+        :root {
+            --neon-blue: #fffb00;
+            --neon-red: #ff073a;
+            --wasteland-orange: #ff4d00;
+            --tech-gray: #1a1a1a;
+        }
+
+        body {
+            background: linear-gradient(45deg, #a71212, #0d0d0d);
+            color: var(--neon-blue);
+            font-family: 'Agency FB', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .boss-container {
+            text-align: center;
+            padding: 2rem;
+            border: 3px solid var(--neon-blue);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 20px var(--neon-blue);
+            position: relative;
+        }
+
+        .boss-emoji {
+            font-size: 8rem;
+            text-shadow: 0 0 15px var(--neon-red);
+            margin: 20px 0;
+            transition: 0.5s;
+        }
+
+        .boss-name {
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin: 20px 0;
+        }
+
+        .health-bar, .shield-bar {
+            width: 400px;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            margin: 20px auto;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid var(--neon-blue);
+        }
+
+        .shield-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #0066ff, #00ffff);
+            transition: 0.3s;
+            border-radius: 15px;
+        }
+
+        .health-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--wasteland-orange), #ff0000);
+            transition: 0.3s;
+            border-radius: 15px;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        input, button {
+            padding: 10px;
+            background: var(--tech-gray);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            font-family: inherit;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: var(--neon-blue);
+            color: black;
+            cursor: pointer;
+        }
+
+        @keyframes shield-break {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        @keyframes death-animation {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100px) rotate(360deg); opacity: 0; }
+        }
+
+        .shield-broken {
+            animation: shield-break 1s forwards;
+        }
+
+        .boss-defeated {
+            animation: death-animation 2s forwards;
+        }
+
+        .crack-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M10 10 L90 90 M30 10 L80 50 M70 90 L10 30" stroke="white" stroke-width="2" fill="none"/></svg>');
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .show-cracks {
+            opacity: 1;
+            transition: 1s;
+        }
+        .shield-bar {
+            position: relative;
+            overflow: visible;
+        }
+
+        .glass-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, 
+                rgba(255,255,255,0.1) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255,255,255,0.1) 50%,
+                rgba(255,255,255,0.1) 75%,
+                transparent 75%);
+            background-size: 50px 50px;
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+            transition: 1s;
+        }
+
+        .shield-broken .glass-effect {
+            animation: glass-break 0.5s forwards;
+        }
+
+        @keyframes glass-break {
+            0% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+            100% {
+                clip-path: polygon(
+                    20% 0%, 80% 0%, 100% 20%,
+                    100% 80%, 80% 100%,
+                    20% 100%, 0% 80%, 0% 20%
+                );
+                opacity: 0;
+            }
+        }
+
+        .config-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border: 2px solid var(--neon-blue);
+            border-radius: 8px;
+        }
+
+        .config-input {
+            margin: 5px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="config-panel">
+        <div class="config-input">
+            <label>Vida Máxima:</label>
+            <input type="number" id="maxHealth" value="100">
+        </div>
+        <div class="config-input">
+            <label>Escudo Máximo:</label>
+            <input type="number" id="maxShield" value="100">
+        </div>
+    </div>
+
+    <div class="boss-container">
+        <div class="boss-emoji">👹</div>
+        <div class="crack-effect"></div>
+        <h1 class="boss-name" contenteditable="false">criatura</h1>
+        <div class="shield-bar">
+            <div class="shield-fill" style="width: 100%"></div>
+        </div>
+        <div class="health-bar">
+            <div class="health-fill" style="width: 100%"></div>
+        </div>
+
+        <div class="controls">
+            <input type="number" id="damageInput" placeholder="Dano">
+            <button onclick="applyDamage()">Aplicar Dano</button>
+            <button onclick="resetBoss()">Resetar</button>
+        </div>
+    </div>
+
+<script>
+      
+    // Variáveis com carregamento inicial
+    let currentShield = Number(localStorage.getItem('bossShield')) || 100;
+    let currentHealth = Number(localStorage.getItem('bossHealth')) || 100;
+    let maxHealth = Number(localStorage.getItem('maxHealth')) || 100;
+    let maxShield = Number(localStorage.getItem('maxShield')) || 100;
+    let shieldActive = JSON.parse(localStorage.getItem('shieldActive')) || true;
+    // Atualiza os valores máximos
+    document.getElementById('maxHealth').value = maxHealth;
+    document.getElementById('maxShield').value = maxShield;
+
+    function saveState() {
+        localStorage.setItem('maxHealth', maxHealth);
+        localStorage.setItem('maxShield', maxShield);
+        localStorage.setItem('bossShield', currentShield);
+        localStorage.setItem('bossHealth', currentHealth);
+        localStorage.setItem('shieldActive', shieldActive);
+        localStorage.setItem('bossName', document.querySelector('.boss-name').innerText);
+    }
+
+    function updateMaxValues() {
+        maxHealth = Number(document.getElementById('maxHealth').value);
+        maxShield = Number(document.getElementById('maxShield').value);
+        currentHealth = maxHealth;
+        currentShield = maxShield;
+        saveState();
+        resetBoss();
+    }
+
+    function applyDamage() {
+        const damage = parseInt(document.getElementById('damageInput').value) || 0;
+        
+        if(shieldActive) {
+            currentShield = Math.max(0, currentShield - damage);
+            document.querySelector('.shield-fill').style.width = (currentShield/maxShield) *100 + '%';
+            
+            if(currentShield === 0) {
+                shieldActive = false;
+                document.querySelector('.shield-bar').classList.add('shield-broken');
+            }
+        } else {
+            currentHealth = Math.max(0, currentHealth - damage);
+            document.querySelector('.health-fill').style.width = (currentHealth/maxHealth) *100 + '%';
+            
+            if(currentHealth === 0) {
+                document.querySelector('.boss-emoji').classList.add('boss-defeated');
+                document.querySelector('.boss-name').classList.add('boss-defeated');
+            }
+        }
+        saveState();
+    }
+
+    function resetBoss() {
+        currentHealth = maxHealth;
+        currentShield = maxShield;
+        shieldActive = true;
+        
+        document.querySelector('.shield-fill').style.width = '100%';
+        document.querySelector('.health-fill').style.width = '100%';
+        document.querySelector('.shield-bar').classList.remove('shield-broken');
+        document.querySelector('.crack-effect').classList.remove('show-cracks');
+        document.querySelector('.boss-emoji').classList.remove('boss-defeated');
+        document.querySelector('.boss-name').classList.remove('boss-defeated');
+        
+        saveState();
+        // Limpa apenas os dados do boss
+        //localStorage.removeItem('bossShield');
+        //localStorage.removeItem('bossHealth');
+        //localStorage.removeItem('shieldActive');
+        //localStorage.removeItem('bossName');
+    }
+
+    // Event listeners para os novos controles
+    document.getElementById('maxHealth').addEventListener('change', updateMaxValues);
+    document.getElementById('maxShield').addEventListener('change', updateMaxValues);
+
+    document.querySelector('.boss-name').addEventListener('input', function(e) {
+        this.innerText = this.innerText.toUpperCase();
+        saveState();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        document.querySelector('.boss-name').innerText = bossName;
+        document.querySelector('.shield-fill').style.width = currentShield + '%';
+        document.querySelector('.health-fill').style.width = currentHealth + '%';
+        
+        if(!shieldActive) {
+            document.querySelector('.shield-bar').classList.add('shield-broken');
+            document.querySelector('.crack-effect').classList.add('show-cracks');
+        }
+        
+        if(currentHealth <= 0) {
+            document.querySelector('.boss-emoji').classList.add('boss-defeated');
+        }
+    });
+</script>
+</body>
+</html>
